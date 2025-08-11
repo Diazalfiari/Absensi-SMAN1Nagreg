@@ -7,9 +7,11 @@ use App\Models\ClassRoom;
 use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\User;
+use App\Exports\ClassesExport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ClassController extends Controller
 {
@@ -200,5 +202,26 @@ class ClassController extends Controller
         
         // Generate code (e.g., "X" + "1" -> "X1", "XI" + "2" -> "XI2")
         return $grade . $number;
+    }
+
+    /**
+     * Export classes data to Excel/CSV
+     */
+    public function export(Request $request)
+    {
+        try {
+            $format = $request->get('format', 'xlsx');
+            $filename = 'data-kelas-' . date('Y-m-d');
+            
+            switch ($format) {
+                case 'csv':
+                    return Excel::download(new ClassesExport, $filename . '.csv', \Maatwebsite\Excel\Excel::CSV);
+                case 'xlsx':
+                default:
+                    return Excel::download(new ClassesExport, $filename . '.xlsx');
+            }
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => 'Gagal mengexport data: ' . $e->getMessage()]);
+        }
     }
 }

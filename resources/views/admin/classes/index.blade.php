@@ -8,9 +8,23 @@
             <a href="{{ route('admin.classes.create') }}" class="btn btn-sm btn-primary">
                 <i class="fas fa-plus me-1"></i>Tambah Kelas
             </a>
-            <button type="button" class="btn btn-sm btn-outline-secondary">
-                <i class="fas fa-download me-1"></i>Export
-            </button>
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-download me-1"></i>Export
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{{ route('admin.classes.export') }}">
+                        <i class="fas fa-file-excel text-success me-2"></i>Export Excel
+                    </a></li>
+                    <li><a class="dropdown-item" href="{{ route('admin.classes.export') }}?format=csv">
+                        <i class="fas fa-file-csv text-info me-2"></i>Export CSV
+                    </a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" onclick="window.print()">
+                        <i class="fas fa-print text-secondary me-2"></i>Print
+                    </a></li>
+                </ul>
+            </div>
         </div>
     </div>
 </div>
@@ -191,6 +205,29 @@
     </div>
 </div>
 @endsection
+
+@push('styles')
+<style>
+@media print {
+    .btn-toolbar, .btn-group, .pagination, .alert {
+        display: none !important;
+    }
+    
+    .card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+    
+    .table {
+        font-size: 12px;
+    }
+    
+    body {
+        -webkit-print-color-adjust: exact;
+    }
+}
+</style>
+@endpush
 
 @push('scripts')
 <script>

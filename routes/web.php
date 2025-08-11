@@ -447,6 +447,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/classes/{class}/edit', [\App\Http\Controllers\Admin\ClassController::class, 'edit'])->name('classes.edit');
         Route::put('/classes/{class}', [\App\Http\Controllers\Admin\ClassController::class, 'update'])->name('classes.update');
         Route::delete('/classes/{class}', [\App\Http\Controllers\Admin\ClassController::class, 'destroy'])->name('classes.destroy');
+        Route::get('/classes/export/excel', [\App\Http\Controllers\Admin\ClassController::class, 'export'])->name('classes.export');
         
         // Subjects routes
         Route::get('/subjects', [\App\Http\Controllers\Admin\SubjectController::class, 'index'])->name('subjects.index');
