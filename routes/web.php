@@ -41,27 +41,38 @@ Route::get('/debug-users', function () {
     return $output;
 });
 
-// Route untuk test login manual
-Route::get('/test-login', function () {
-    $credentials = [
-        'email' => 'admin@smansan.sch.id',
-        'password' => 'password'
-    ];
+// Route untuk test login manual student
+Route::get('/test-student-login', function () {
+    $user = \App\Models\User::where('email', 'student@smansan.sch.id')->first();
     
-    $user = \App\Models\User::where('email', 'admin@smansan.sch.id')->first();
-    
-    $output = '<h2>Test Login Debug</h2>';
+    $output = '<h2>Test Student Login Debug</h2>';
     
     if ($user) {
         $output .= '<p><strong>User found:</strong> ' . $user->email . '</p>';
         $output .= '<p><strong>Role:</strong> ' . $user->role . '</p>';
-        $output .= '<p><strong>Password Hash:</strong> ' . substr($user->password, 0, 50) . '...</p>';
+        $output .= '<p><strong>User ID:</strong> ' . $user->id . '</p>';
         
-        // Test password verification
-        $passwordCheck = \Illuminate\Support\Facades\Hash::check('password', $user->password);
-        $output .= '<p><strong>Password Check:</strong> ' . ($passwordCheck ? 'VALID' : 'INVALID') . '</p>';
+        // Test student relationship
+        $student = $user->student;
+        if ($student) {
+            $output .= '<p><strong>Student found:</strong> ' . $student->name . '</p>';
+            $output .= '<p><strong>Student ID:</strong> ' . $student->id . '</p>';
+            $output .= '<p><strong>Class ID:</strong> ' . $student->class_id . '</p>';
+            $output .= '<p><strong>Status:</strong> ' . $student->status . '</p>';
+        } else {
+            $output .= '<p><strong>Student relationship:</strong> NOT FOUND</p>';
+            
+            // Check direct query
+            $directStudent = \App\Models\Student::where('user_id', $user->id)->first();
+            if ($directStudent) {
+                $output .= '<p><strong>Direct Student Query:</strong> FOUND - ' . $directStudent->name . '</p>';
+            } else {
+                $output .= '<p><strong>Direct Student Query:</strong> NOT FOUND</p>';
+            }
+        }
         
-        // Test authentication
+        // Test login
+        $credentials = ['email' => 'student@smansan.sch.id', 'password' => 'password'];
         if (\Illuminate\Support\Facades\Auth::attempt($credentials)) {
             $output .= '<p><strong>Auth Attempt:</strong> SUCCESS</p>';
             $output .= '<p><a href="/dashboard">Go to Dashboard</a></p>';
@@ -381,16 +392,35 @@ Route::get('/force-login-admin', function () {
     return 'Admin user not found! <a href="/create-demo-users">Create Demo Users</a>';
 });
 
-// Route untuk force login sebagai teacher untuk testing
-Route::get('/force-login-teacher', function () {
-    $user = \App\Models\User::where('email', 'teacher@smansan.sch.id')->first();
+// Route untuk test student dashboard secara langsung
+Route::get('/test-student-dashboard', function () {
+    $user = \App\Models\User::where('email', 'student@smansan.sch.id')->first();
+    
+    if (!$user) {
+        return 'Student user not found!';
+    }
+    
+    \Illuminate\Support\Facades\Auth::login($user);
+    
+    $student = $user->student;
+    
+    if (!$student) {
+        return 'Student record not found for user: ' . $user->email . ' (ID: ' . $user->id . ')';
+    }
+    
+    return 'Student dashboard test successful! Student: ' . $student->name . ' in class: ' . ($student->classRoom->name ?? 'N/A');
+});
+
+// Route untuk force login sebagai student untuk testing
+Route::get('/force-login-student', function () {
+    $user = \App\Models\User::where('email', 'student@smansan.sch.id')->first();
     
     if ($user) {
         \Illuminate\Support\Facades\Auth::login($user);
-        return redirect()->route('dashboard')->with('success', 'Force logged in as teacher!');
+        return redirect()->route('student.dashboard')->with('success', 'Force logged in as student!');
     }
     
-    return 'Teacher user not found! <a href="/create-demo-users">Create Demo Users</a>';
+    return 'Student user not found! <a href="/create-demo-users">Create Demo Users</a>';
 });
 
 Route::get('/dashboard', function () {
@@ -494,17 +524,30 @@ Route::middleware('auth')->group(function () {
             if (!$student) {
                 return redirect()->route('student.dashboard')->with('error', 'Data siswa tidak ditemukan.');
             }
+
+            // Map English day names to Indonesian
+            $dayMapping = [
+                'Monday' => 'Senin',
+                'Tuesday' => 'Selasa', 
+                'Wednesday' => 'Rabu',
+                'Thursday' => 'Kamis',
+                'Friday' => 'Jumat',
+                'Saturday' => 'Sabtu',
+                'Sunday' => 'Minggu'
+            ];
             
-            // Get weekly schedules
+            $today = $dayMapping[now()->format('l')] ?? null;
+            
+            // Get weekly schedules with proper day ordering
             $weeklySchedules = \App\Models\Schedule::with(['subject', 'teacher'])
                                                   ->where('class_id', $student->class_id)
                                                   ->where('is_active', true)
-                                                  ->orderBy('day')
+                                                  ->orderByRaw("FIELD(day, 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu')")
                                                   ->orderBy('start_time')
                                                   ->get();
             
             // Get today's schedules
-            $todaySchedules = $weeklySchedules->where('day', strtolower(now()->format('l')));
+            $todaySchedules = $weeklySchedules->where('day', $today);
             
             // Get subjects for this class
             $subjects = \App\Models\Subject::whereHas('schedules', function($query) use ($student) {
@@ -523,11 +566,24 @@ Route::middleware('auth')->group(function () {
             if (!$student) {
                 return redirect()->route('student.dashboard')->with('error', 'Data siswa tidak ditemukan.');
             }
+
+            // Map English day names to Indonesian
+            $dayMapping = [
+                'Monday' => 'Senin',
+                'Tuesday' => 'Selasa', 
+                'Wednesday' => 'Rabu',
+                'Thursday' => 'Kamis',
+                'Friday' => 'Jumat',
+                'Saturday' => 'Sabtu',
+                'Sunday' => 'Minggu'
+            ];
+            
+            $today = $dayMapping[now()->format('l')] ?? null;
             
             // Get today's schedules
             $todaySchedules = \App\Models\Schedule::with(['subject', 'teacher'])
                                                   ->where('class_id', $student->class_id)
-                                                  ->where('day', strtolower(now()->format('l')))
+                                                  ->where('day', $today)
                                                   ->where('is_active', true)
                                                   ->orderBy('start_time')
                                                   ->get();

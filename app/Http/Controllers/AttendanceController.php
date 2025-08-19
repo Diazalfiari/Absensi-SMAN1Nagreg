@@ -31,83 +31,150 @@ class AttendanceController extends Controller
     public function store(Request $request)
     {
         try {
+            // Log the incoming request for debugging
+            Log::info('Attendance submission attempt', [
+                'user_id' => Auth::id(),
+                'request_data' => $request->except(['photo']) // Exclude photo for log size
+            ]);
+
             $request->validate([
                 'schedule_id' => 'required|exists:schedules,id',
-                'status' => 'required|in:Hadir,Sakit,Izin,Alpha',
-                'photo' => 'required|string', // Base64 photo data
+                'status' => 'required|in:hadir,sakit,izin,alpha',
+                'photo' => 'nullable|string', // Base64 photo data - optional for non-hadir status
                 'latitude' => 'nullable|numeric',
                 'longitude' => 'nullable|numeric',
                 'notes' => 'nullable|string|max:255'
             ]);
+
+            // Validate photo is required for 'hadir' status
+            if ($request->status === 'hadir' && empty($request->photo)) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Foto wajib untuk status Hadir!'
+                ]);
+            }
 
             // Get current user's student record
             $user = Auth::user();
             $student = Student::where('user_id', $user->id)->first();
             
             if (!$student) {
-                return response()->json(['success' => false, 'message' => 'Student data not found!']);
+                return response()->json(['success' => false, 'message' => 'Data siswa tidak ditemukan!']);
             }
 
             // Validate schedule
             $schedule = Schedule::findOrFail($request->schedule_id);
             $now = Carbon::now();
-            $scheduleStart = Carbon::parse($schedule->start_time);
-            $scheduleEnd = Carbon::parse($schedule->end_time);
+            
+            // Parse schedule times properly
+            $scheduleStart = Carbon::createFromFormat('H:i:s', $schedule->start_time);
+            $scheduleEnd = Carbon::createFromFormat('H:i:s', $schedule->end_time);
+            
+            // Set the date to today for comparison
+            $scheduleStart->setDateFrom($now);
+            $scheduleEnd->setDateFrom($now);
 
-            // Check if within attendance window (30 minutes before to 15 minutes after start)
-            $attendanceStart = $scheduleStart->copy()->subMinutes(30);
-            $attendanceEnd = $scheduleStart->copy()->addMinutes(15);
+            // Check if within attendance window (15 minutes before to end of class)
+            $attendanceStart = $scheduleStart->copy()->subMinutes(15);
+            $attendanceEnd = $scheduleEnd->copy();
 
-            if ($now < $attendanceStart || $now > $attendanceEnd) {
+            // FOR TESTING: Allow attendance anytime (remove this in production)
+            $testingMode = true; // Set to false in production
+            
+            if (!$testingMode && ($now->lt($attendanceStart) || $now->gt($attendanceEnd))) {
                 return response()->json([
                     'success' => false, 
-                    'message' => 'Attendance time is outside the allowed window!'
+                    'message' => 'Waktu absensi di luar jendela yang diizinkan! Anda hanya dapat absen 15 menit sebelum hingga akhir pelajaran.'
                 ]);
             }
 
-                        // Check if already attended today
+            // Check if already attended today
             $existingAttendance = Attendance::where('student_id', $student->id)
                                            ->where('schedule_id', $schedule->id)
-                                           ->where('created_at', '>=', $now->startOfDay())
-                                           ->where('created_at', '<=', $now->endOfDay())
+                                           ->where('date', $now->toDateString())
                                            ->first();
 
             if ($existingAttendance) {
                 return response()->json([
                     'success' => false, 
-                    'message' => 'You have already submitted attendance for this schedule!'
+                    'message' => 'Anda sudah melakukan absensi untuk jadwal ini hari ini!'
                 ]);
             }
 
             // Process and save photo
             $photoPath = null;
-            if ($request->photo && $request->status === 'Hadir') {
+            if ($request->photo && $request->status === 'hadir') {
                 $photoPath = $this->saveBase64Photo($request->photo, $student->id);
+                
+                if (!$photoPath) {
+                    return response()->json([
+                        'success' => false, 
+                        'message' => 'Gagal menyimpan foto. Coba lagi.'
+                    ]);
+                }
             }
+
+            // Determine if student is late
+            $isLate = $now->gt($scheduleStart);
+            $lateMinutes = $isLate ? $now->diffInMinutes($scheduleStart) : 0;
 
             // Create attendance record
             $attendance = Attendance::create([
                 'student_id' => $student->id,
                 'schedule_id' => $schedule->id,
-                'status' => $request->status,
+                'date' => $now->toDateString(),
+                'status' => strtolower($request->status),
                 'photo_path' => $photoPath,
                 'latitude' => $request->latitude,
                 'longitude' => $request->longitude,
                 'notes' => $request->notes,
-                'submitted_at' => $now
+                'submitted_at' => $now,
+                'check_in' => $now,
+                'is_late' => $isLate,
+                'late_minutes' => $lateMinutes
+            ]);
+
+            Log::info('Attendance submitted successfully', [
+                'attendance_id' => $attendance->id,
+                'student_id' => $student->id,
+                'schedule_id' => $schedule->id
             ]);
 
             return response()->json([
                 'success' => true, 
-                'message' => 'Attendance submitted successfully!',
-                'data' => $attendance
+                'message' => 'Absensi berhasil disimpan!',
+                'data' => [
+                    'id' => $attendance->id,
+                    'status' => $attendance->status,
+                    'date' => $attendance->date,
+                    'is_late' => $attendance->is_late,
+                    'late_minutes' => $attendance->late_minutes
+                ]
             ]);
 
-        } catch (\Exception $e) {
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::warning('Attendance validation failed', [
+                'errors' => $e->errors(),
+                'user_id' => Auth::id()
+            ]);
+            
+            $errorMessages = collect($e->errors())->flatten()->implode(', ');
+            
             return response()->json([
                 'success' => false, 
-                'message' => 'Failed to submit attendance: ' . $e->getMessage()
+                'message' => 'Data tidak valid: ' . $errorMessages
+            ], 422);
+            
+        } catch (\Exception $e) {
+            Log::error('Attendance submission error: ' . $e->getMessage(), [
+                'user_id' => Auth::id(),
+                'trace' => $e->getTraceAsString()
             ]);
+            
+            return response()->json([
+                'success' => false, 
+                'message' => 'Gagal menyimpan absensi: ' . $e->getMessage()
+            ], 500);
         }
     }
 
@@ -227,11 +294,27 @@ class AttendanceController extends Controller
             return response()->json(['success' => false, 'message' => 'Student not found']);
         }
 
-        $today = Carbon::now()->format('l'); // Monday, Tuesday, etc.
+        // Map English day names to Indonesian
+        $dayMapping = [
+            'Monday' => 'Senin',
+            'Tuesday' => 'Selasa', 
+            'Wednesday' => 'Rabu',
+            'Thursday' => 'Kamis',
+            'Friday' => 'Jumat',
+            'Saturday' => 'Sabtu',
+            'Sunday' => 'Minggu'
+        ];
         
-        $schedules = Schedule::where('class_room_id', $student->class_room_id)
+        $today = $dayMapping[Carbon::now()->format('l')] ?? null;
+        
+        if (!$today) {
+            return response()->json(['success' => false, 'message' => 'Invalid day']);
+        }
+        
+        $schedules = Schedule::where('class_id', $student->class_id)
                            ->where('day', $today)
-                           ->with(['subject'])
+                           ->where('is_active', true)
+                           ->with(['subject', 'teacher'])
                            ->orderBy('start_time')
                            ->get();
 
@@ -239,8 +322,7 @@ class AttendanceController extends Controller
         $schedulesWithStatus = $schedules->map(function($schedule) use ($student) {
             $attendance = Attendance::where('student_id', $student->id)
                                    ->where('schedule_id', $schedule->id)
-                                   ->where('created_at', '>=', Carbon::today())
-                                   ->where('created_at', '<=', Carbon::today()->endOfDay())
+                                   ->where('date', Carbon::today()->toDateString())
                                    ->first();
             
             $schedule->attendance_status = $attendance ? $attendance->status : null;
@@ -261,12 +343,23 @@ class AttendanceController extends Controller
     private function canAttendSchedule($schedule)
     {
         $now = Carbon::now();
-        $scheduleStart = Carbon::parse($schedule->start_time);
         
-        // Can attend 30 minutes before to 15 minutes after start time
-        $attendanceStart = $scheduleStart->copy()->subMinutes(30);
-        $attendanceEnd = $scheduleStart->copy()->addMinutes(15);
-        
-        return $now >= $attendanceStart && $now <= $attendanceEnd;
+        try {
+            $scheduleStart = Carbon::createFromFormat('H:i:s', $schedule->start_time);
+            $scheduleEnd = Carbon::createFromFormat('H:i:s', $schedule->end_time);
+            
+            // Set today's date for proper comparison
+            $scheduleStart->setDateFrom($now);
+            $scheduleEnd->setDateFrom($now);
+            
+            // Can attend 15 minutes before to end of class
+            $attendanceStart = $scheduleStart->copy()->subMinutes(15);
+            $attendanceEnd = $scheduleEnd->copy();
+            
+            return $now->between($attendanceStart, $attendanceEnd);
+        } catch (\Exception $e) {
+            Log::error('Error parsing schedule time: ' . $e->getMessage());
+            return false;
+        }
     }
 }

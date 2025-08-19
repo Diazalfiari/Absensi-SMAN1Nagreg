@@ -16,17 +16,22 @@ class Attendance extends Model
         'status',
         'check_in',
         'check_out',
+        'photo_path',
         'photo',
         'notes',
         'location',
+        'latitude',
+        'longitude',
+        'submitted_at',
         'is_late',
         'late_minutes'
     ];
 
     protected $casts = [
         'date' => 'date',
-        'check_in' => 'datetime:H:i',
-        'check_out' => 'datetime:H:i',
+        'check_in' => 'datetime',
+        'check_out' => 'datetime',
+        'submitted_at' => 'datetime',
         'is_late' => 'boolean',
         'late_minutes' => 'integer'
     ];

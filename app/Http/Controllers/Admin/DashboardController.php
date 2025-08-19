@@ -133,7 +133,10 @@ class DashboardController extends Controller
         $student = $user->student;
         
         if (!$student) {
-            return redirect()->route('dashboard')->with('error', 'Data siswa tidak ditemukan.');
+            // Instead of redirecting to dashboard (which would cause infinite loop),
+            // redirect to login with error message
+            Auth::logout();
+            return redirect()->route('login')->with('error', 'Data siswa tidak ditemukan. Silakan hubungi administrator.');
         }
 
         // Get student's schedules for today

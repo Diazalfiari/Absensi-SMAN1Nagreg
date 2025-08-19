@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Attendance Endpoint</title>
+    <meta name="csrf-token" content="">
+</head>
+<body>
+    <h1>Test Attendance Endpoint</h1>
+    <button onclick="testEndpoint()">Test Route</button>
+    <div id="result"></div>
+
+    <script>
+    function testEndpoint() {
+        // First, let's get CSRF token
+        fetch('/student/attendance')
+            .then(response => response.text())
+            .then(html => {
+                // Extract CSRF token from the attendance page
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const csrfToken = doc.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                
+                console.log('CSRF Token extracted:', csrfToken);
+                
+                // Now test the attendance submission endpoint
+                const testData = {
+                    schedule_id: 1,
+                    status: 'hadir',
+                    photo: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwA/wA==',
+                    latitude: -6.2,
+                    longitude: 106.8,
+                    notes: 'test',
+                    _token: csrfToken
+                };
+                
+                return fetch('/student/attendance/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+            })
+            .then(response => {
+                console.log('Test response status:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('Test response data:', data);
+                document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            })
+            .catch(error => {
+                console.error('Test error:', error);
+                document.getElementById('result').innerHTML = '<pre>Error: ' + error.message + '</pre>';
+            });
+    }
+    </script>
+</body>
+</html>

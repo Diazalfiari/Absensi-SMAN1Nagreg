@@ -5,9 +5,12 @@
     <h1 class="h2"><i class="fas fa-graduation-cap me-2"></i>Dashboard Siswa</h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <div class="btn-group me-2">
-            <button type="button" class="btn btn-sm btn-primary">
+            <a href="{{ route('student.attendance') }}" class="btn btn-sm btn-primary">
                 <i class="fas fa-camera me-1"></i>Absen Sekarang
-            </button>
+            </a>
+            <a href="{{ route('student.schedule') }}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-calendar-alt me-1"></i>Lihat Jadwal
+            </a>
         </div>
     </div>
 </div>
@@ -127,14 +130,57 @@
                             <div class="border rounded p-3 h-100">
                                 <div class="d-flex justify-content-between align-items-start mb-2">
                                     <h6 class="mb-0">{{ $schedule->subject->name }}</h6>
-                                    <span class="badge bg-primary">{{ $schedule->start_time }} - {{ $schedule->end_time }}</span>
+                                    @php
+                                        $now = now();
+                                        $startTime = \Carbon\Carbon::parse($schedule->start_time);
+                                        $endTime = \Carbon\Carbon::parse($schedule->end_time);
+                                        $canAttend = $now->between($startTime->subMinutes(15), $endTime);
+                                        $isActive = $now->between($startTime, $endTime);
+                                    @endphp
+                                    
+                                    @if($isActive)
+                                        <span class="badge bg-success">Sedang Berlangsung</span>
+                                    @elseif($canAttend)
+                                        <span class="badge bg-warning">Dapat Absen</span>
+                                    @else
+                                        <span class="badge bg-primary">{{ $startTime->format('H:i') }} - {{ $endTime->format('H:i') }}</span>
+                                    @endif
                                 </div>
                                 <p class="text-muted mb-1">
                                     <i class="fas fa-user me-1"></i>{{ $schedule->teacher->name }}
                                 </p>
-                                <p class="text-muted mb-0">
+                                <p class="text-muted mb-3">
                                     <i class="fas fa-door-open me-1"></i>{{ $schedule->room ?? 'Ruang TBA' }}
                                 </p>
+                                
+                                @if($canAttend)
+                                    @php
+                                        // Check if already attended today
+                                        $alreadyAttended = \App\Models\Attendance::where('student_id', $student->id)
+                                                                                ->where('schedule_id', $schedule->id)
+                                                                                ->where('date', now()->toDateString())
+                                                                                ->exists();
+                                    @endphp
+                                    
+                                    @if($alreadyAttended)
+                                        <button class="btn btn-success btn-sm w-100" disabled>
+                                            <i class="fas fa-check me-1"></i>Sudah Absen
+                                        </button>
+                                    @else
+                                        <a href="{{ route('student.attendance') }}#schedule-{{ $schedule->id }}" 
+                                           class="btn btn-primary btn-sm w-100">
+                                            <i class="fas fa-camera me-1"></i>Absen Sekarang
+                                        </a>
+                                    @endif
+                                @else
+                                    <button class="btn btn-secondary btn-sm w-100" disabled>
+                                        @if($now->lt($startTime))
+                                            <i class="fas fa-clock me-1"></i>Belum Waktunya
+                                        @else
+                                            <i class="fas fa-times me-1"></i>Waktu Habis
+                                        @endif
+                                    </button>
+                                @endif
                             </div>
                         </div>
                         @endforeach

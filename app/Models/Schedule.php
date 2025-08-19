@@ -23,8 +23,6 @@ class Schedule extends Model
     ];
 
     protected $casts = [
-        'start_time' => 'datetime:H:i',
-        'end_time' => 'datetime:H:i',
         'is_active' => 'boolean',
         'semester' => 'integer'
     ];
@@ -66,7 +64,19 @@ class Schedule extends Model
      */
     public function isToday()
     {
-        return strtolower($this->day) === strtolower(now()->format('l'));
+        // Map English day names to Indonesian
+        $dayMapping = [
+            'Monday' => 'Senin',
+            'Tuesday' => 'Selasa', 
+            'Wednesday' => 'Rabu',
+            'Thursday' => 'Kamis',
+            'Friday' => 'Jumat',
+            'Saturday' => 'Sabtu',
+            'Sunday' => 'Minggu'
+        ];
+        
+        $today = $dayMapping[now()->format('l')] ?? null;
+        return $this->day === $today;
     }
 
     /**
@@ -78,7 +88,10 @@ class Schedule extends Model
             return false;
         }
 
-        $now = now()->format('H:i');
-        return $now >= $this->start_time && $now <= $this->end_time;
+        $now = now();
+        $startTime = \Carbon\Carbon::createFromFormat('H:i:s', $this->start_time);
+        $endTime = \Carbon\Carbon::createFromFormat('H:i:s', $this->end_time);
+        
+        return $now->between($startTime, $endTime);
     }
 }

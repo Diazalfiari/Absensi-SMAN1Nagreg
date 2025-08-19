@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Attendance API</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .btn { padding: 10px 15px; margin: 5px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .result { margin: 10px 0; padding: 10px; background: #f8f9fa; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <h1>Test Attendance Submission</h1>
+    
+    <div>
+        <h3>Test Data:</h3>
+        <p>Schedule ID: 5 (Bahasa Indonesia - Selasa 07:45-08:30)</p>
+        <p>Student ID: 10 (diaz)</p>
+        <p>Status: hadir</p>
+    </div>
+    
+    <button class="btn" onclick="testAttendance()">Test Submit Attendance</button>
+    <button class="btn" onclick="testWithoutPhoto()">Test Without Photo (Sakit)</button>
+    
+    <div id="result" class="result" style="display: none;"></div>
+
+    <script>
+        async function testAttendance() {
+            const result = document.getElementById('result');
+            result.style.display = 'block';
+            result.innerHTML = 'Testing...';
+            
+            // Create a simple base64 image for testing
+            const testPhoto = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwA=/';
+            
+            const data = {
+                schedule_id: 5,
+                status: 'hadir',
+                photo: testPhoto,
+                notes: 'Test attendance submission',
+                latitude: -6.9175,
+                longitude: 107.6191
+            };
+            
+            try {
+                const response = await fetch('/Absensi-SMANSAN/public/student/attendance/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const responseData = await response.json();
+                
+                result.innerHTML = `
+                    <h4>Response:</h4>
+                    <p>Status: ${response.status}</p>
+                    <p>Success: ${responseData.success}</p>
+                    <p>Message: ${responseData.message}</p>
+                    <pre>${JSON.stringify(responseData, null, 2)}</pre>
+                `;
+                
+            } catch (error) {
+                result.innerHTML = `
+                    <h4>Error:</h4>
+                    <p>${error.message}</p>
+                `;
+            }
+        }
+        
+        async function testWithoutPhoto() {
+            const result = document.getElementById('result');
+            result.style.display = 'block';
+            result.innerHTML = 'Testing without photo...';
+            
+            const data = {
+                schedule_id: 5,
+                status: 'sakit',
+                notes: 'Test sakit without photo',
+                latitude: -6.9175,
+                longitude: 107.6191
+            };
+            
+            try {
+                const response = await fetch('/Absensi-SMANSAN/public/student/attendance/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                const responseData = await response.json();
+                
+                result.innerHTML = `
+                    <h4>Response (Without Photo):</h4>
+                    <p>Status: ${response.status}</p>
+                    <p>Success: ${responseData.success}</p>
+                    <p>Message: ${responseData.message}</p>
+                    <pre>${JSON.stringify(responseData, null, 2)}</pre>
+                `;
+                
+            } catch (error) {
+                result.innerHTML = `
+                    <h4>Error:</h4>
+                    <p>${error.message}</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
