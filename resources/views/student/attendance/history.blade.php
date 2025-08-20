@@ -16,10 +16,10 @@
 <div class="row mb-4">
     @php
         $totalAttendances = $attendances->total();
-        $hadirCount = $attendances->where('status', 'Hadir')->count();
-        $sakitCount = $attendances->where('status', 'Sakit')->count();
-        $izinCount = $attendances->where('status', 'Izin')->count();
-        $alphaCount = $attendances->where('status', 'Alpha')->count();
+        $hadirCount = $attendances->where('status', 'hadir')->count();
+        $sakitCount = $attendances->where('status', 'sakit')->count();
+        $izinCount = $attendances->where('status', 'izin')->count();
+        $alphaCount = $totalAttendances - ($hadirCount + $sakitCount + $izinCount);
         $attendancePercentage = $totalAttendances > 0 ? round(($hadirCount / $totalAttendances) * 100, 1) : 0;
     @endphp
     
@@ -111,7 +111,6 @@
                                     <th>Status</th>
                                     <th>Waktu Submit</th>
                                     <th>Keterangan</th>
-                                    <th>Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -136,48 +135,36 @@
                                         </span>
                                     </td>
                                     <td>
-                                        @if($attendance->status === 'Hadir')
-                                            <span class="badge bg-success">
-                                                <i class="fas fa-check me-1"></i>Hadir
-                                            </span>
-                                        @elseif($attendance->status === 'Sakit')
-                                            <span class="badge bg-warning">
-                                                <i class="fas fa-thermometer-half me-1"></i>Sakit
-                                            </span>
-                                        @elseif($attendance->status === 'Izin')
-                                            <span class="badge bg-info">
-                                                <i class="fas fa-hand-paper me-1"></i>Izin
-                                            </span>
-                                        @else
-                                            <span class="badge bg-danger">
-                                                <i class="fas fa-times me-1"></i>Alpha
-                                            </span>
-                                        @endif
+                                        <span class="badge bg-{{ $attendance->getStatusColor() }}">
+                                            @if($attendance->status === 'hadir')
+                                                <i class="fas fa-check me-1"></i>
+                                            @elseif($attendance->status === 'sakit')
+                                                <i class="fas fa-thermometer-half me-1"></i>
+                                            @elseif($attendance->status === 'izin')
+                                                <i class="fas fa-hand-paper me-1"></i>
+                                            @else
+                                                <i class="fas fa-times me-1"></i>
+                                            @endif
+                                            {{ $attendance->getStatusLabel() }}
+                                        </span>
                                     </td>
                                     <td>
-                                        <div class="fw-semibold">
-                                            {{ $attendance->submitted_at ? $attendance->submitted_at->format('H:i') : '-' }}
-                                        </div>
-                                        <small class="text-muted">
-                                            {{ $attendance->created_at->diffForHumans() }}
-                                        </small>
+                                        @if($attendance->check_in)
+                                            <div class="fw-semibold">
+                                                {{ $attendance->check_in->format('H:i') }}
+                                            </div>
+                                            <small class="text-muted">
+                                                {{ $attendance->check_in->diffForHumans() }}
+                                            </small>
+                                        @else
+                                            <span class="text-muted">Belum submit</span>
+                                        @endif
                                     </td>
                                     <td>
                                         @if($attendance->notes)
                                             <small class="text-muted">{{ $attendance->notes }}</small>
                                         @else
                                             <small class="text-muted">-</small>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        @if($attendance->photo_path && $attendance->status === 'Hadir')
-                                            <button class="btn btn-sm btn-outline-primary" 
-                                                    onclick="showPhoto('{{ asset('storage/' . $attendance->photo_path) }}')"
-                                                    title="Lihat Foto">
-                                                <i class="fas fa-image"></i>
-                                            </button>
-                                        @else
-                                            <span class="text-muted">-</span>
                                         @endif
                                     </td>
                                 </tr>
@@ -205,32 +192,4 @@
     </div>
 </div>
 
-<!-- Photo Modal -->
-<div class="modal fade" id="photoModal" tabindex="-1" aria-labelledby="photoModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="photoModalLabel">
-                    <i class="fas fa-image me-2"></i>Foto Absensi
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body text-center">
-                <img id="attendance-photo" src="" alt="Foto Absensi" class="img-fluid rounded" style="max-height: 500px;">
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
-            </div>
-        </div>
-    </div>
-</div>
 @endsection
-
-@push('scripts')
-<script>
-function showPhoto(photoUrl) {
-    document.getElementById('attendance-photo').src = photoUrl;
-    new bootstrap.Modal(document.getElementById('photoModal')).show();
-}
-</script>
-@endpush

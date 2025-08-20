@@ -240,8 +240,8 @@
                                     <td>{{ $attendance->schedule->subject->name }}</td>
                                     <td>{{ $attendance->check_in ? $attendance->check_in->format('H:i') : '-' }}</td>
                                     <td>
-                                        <span class="attendance-status status-{{ $attendance->status }}">
-                                            {{ ucfirst($attendance->status) }}
+                                        <span class="badge bg-{{ $attendance->getStatusColor() }}">
+                                            {{ $attendance->getStatusLabel() }}
                                         </span>
                                     </td>
                                     <td>{{ $attendance->notes ?? '-' }}</td>

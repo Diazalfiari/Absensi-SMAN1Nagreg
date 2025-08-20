@@ -176,6 +176,32 @@
             min-height: 100vh;
         }
 
+        /* User Profile Section Styles */
+        .user-profile-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .user-avatar-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .user-avatar {
+            border: 2px solid rgba(255,255,255,0.3);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
         @media (max-width: 767.98px) {
             .sidebar {
                 transform: translateX(-100%);
@@ -238,11 +264,16 @@
             </div>
 
             <!-- User Info -->
-            <div class="text-center mb-4 p-3 rounded" style="background-color: rgba(255,255,255,0.1);">
-                <img src="https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->name) }}" 
-                     alt="" width="50" height="50" class="rounded-circle mb-2">
-                <div class="text-white">
-                    <div class="fw-bold">{{ auth()->user()->name }}</div>
+            <div class="user-profile-section mb-4 p-3 rounded" style="background-color: rgba(255,255,255,0.1);">
+                <div class="user-avatar-container">
+                    <img src="https://ui-avatars.com/api/?name={{ urlencode(auth()->user()->name) }}&size=50&background=ffffff&color=2563eb&font-size=0.6" 
+                         alt="{{ auth()->user()->name }}" 
+                         width="50" 
+                         height="50" 
+                         class="user-avatar rounded-circle">
+                </div>
+                <div class="user-info text-white">
+                    <div class="fw-bold mb-1">{{ auth()->user()->name }}</div>
                     <small class="text-white-50">{{ ucfirst(auth()->user()->role) }}</small>
                 </div>
             </div>
@@ -346,14 +377,15 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('student.attendance*') ? 'active' : '' }}" 
+                        <a class="nav-link {{ request()->routeIs('student.attendance') && !request()->routeIs('student.attendance.history') ? 'active' : '' }}" 
                            href="{{ route('student.attendance') }}">
                             <i class="fas fa-camera me-2"></i>
                             Absensi
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#">
+                        <a class="nav-link {{ request()->routeIs('student.attendance.history') ? 'active' : '' }}" 
+                           href="{{ route('student.attendance.history') }}">
                             <i class="fas fa-history me-2"></i>
                             Riwayat Absensi
                         </a>

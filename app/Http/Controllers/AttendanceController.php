@@ -118,17 +118,24 @@ class AttendanceController extends Controller
             $isLate = $now->gt($scheduleStart);
             $lateMinutes = $isLate ? $now->diffInMinutes($scheduleStart) : 0;
 
+            // Prepare location data
+            $location = null;
+            if ($request->latitude && $request->longitude) {
+                $location = json_encode([
+                    'latitude' => $request->latitude,
+                    'longitude' => $request->longitude
+                ]);
+            }
+
             // Create attendance record
             $attendance = Attendance::create([
                 'student_id' => $student->id,
                 'schedule_id' => $schedule->id,
                 'date' => $now->toDateString(),
                 'status' => strtolower($request->status),
-                'photo_path' => $photoPath,
-                'latitude' => $request->latitude,
-                'longitude' => $request->longitude,
+                'photo' => $photoPath,
+                'location' => $location,
                 'notes' => $request->notes,
-                'submitted_at' => $now,
                 'check_in' => $now,
                 'is_late' => $isLate,
                 'late_minutes' => $lateMinutes

@@ -16,13 +16,9 @@ class Attendance extends Model
         'status',
         'check_in',
         'check_out',
-        'photo_path',
         'photo',
         'notes',
         'location',
-        'latitude',
-        'longitude',
-        'submitted_at',
         'is_late',
         'late_minutes'
     ];
@@ -31,9 +27,9 @@ class Attendance extends Model
         'date' => 'date',
         'check_in' => 'datetime',
         'check_out' => 'datetime',
-        'submitted_at' => 'datetime',
         'is_late' => 'boolean',
-        'late_minutes' => 'integer'
+        'late_minutes' => 'integer',
+        'location' => 'array' // Cast location JSON to array
     ];
 
     /**
@@ -50,6 +46,22 @@ class Attendance extends Model
     public function schedule()
     {
         return $this->belongsTo(Schedule::class);
+    }
+
+    /**
+     * Get latitude from location JSON
+     */
+    public function getLatitude()
+    {
+        return $this->location['latitude'] ?? null;
+    }
+
+    /**
+     * Get longitude from location JSON
+     */
+    public function getLongitude()
+    {
+        return $this->location['longitude'] ?? null;
     }
 
     /**

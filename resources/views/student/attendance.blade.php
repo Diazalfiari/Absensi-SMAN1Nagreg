@@ -45,6 +45,15 @@
                 </h5>
             </div>
             <div class="card-body">
+                <!-- Debug info -->
+                <div class="alert alert-info mb-3">
+                    <small>
+                        Debug: Total schedules today = {{ isset($todaySchedules) ? $todaySchedules->count() : 'undefined' }}<br>
+                        Current time (WIB): {{ now()->format('Y-m-d H:i:s T') }}<br>
+                        Student: {{ Auth::user()->student->name ?? 'N/A' }} (Class: {{ Auth::user()->student->class_room->name ?? 'N/A' }})
+                    </small>
+                </div>
+                
                 @if(isset($todaySchedules) && $todaySchedules->count() > 0)
                     <div class="row">
                         @foreach($todaySchedules as $schedule)
@@ -99,6 +108,18 @@
                                             $isPast = true;
                                         }
                                     @endphp
+                                    
+                                    <!-- Debug schedule info -->
+                                    <div class="alert alert-warning p-2 mb-2">
+                                        <small>
+                                            Schedule ID: {{ $schedule->id }}<br>
+                                            Time: {{ $schedule->start_time }} - {{ $schedule->end_time }}<br>
+                                            canAttend: {{ $canAttend ? 'true' : 'false' }}<br>
+                                            isPast: {{ $isPast ? 'true' : 'false' }}<br>
+                                            isActive: {{ $isActive ? 'true' : 'false' }}<br>
+                                            testingMode: {{ $testingMode ? 'true' : 'false' }}
+                                        </small>
+                                    </div>
                                     
                                     @if($canAttend && !$isPast)
                                         <button class="btn btn-success w-100 btn-attendance" 
@@ -246,10 +267,15 @@
                                 <tr>
                                     <td>{{ $attendance->date->format('d M Y') }}</td>
                                     <td>{{ $attendance->schedule->subject->name }}</td>
-                                    <td>{{ $attendance->check_in ? $attendance->check_in->format('H:i') : '-' }}</td>
                                     <td>
-                                        <span class="attendance-status status-{{ $attendance->status }}">
-                                            {{ ucfirst($attendance->status) }}
+                                        {{ $attendance->check_in ? $attendance->check_in->format('H:i') : '-' }}
+                                        @if($attendance->check_in)
+                                            <small class="text-muted d-block">{{ $attendance->check_in->format('T') }}</small>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ $attendance->getStatusColor() }}">
+                                            {{ $attendance->getStatusLabel() }}
                                         </span>
                                     </td>
                                     <td>{{ $attendance->notes ?? '-' }}</td>
@@ -433,7 +459,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (attendanceButtons.length === 0) {
         console.error('❌ NO ATTENDANCE BUTTONS FOUND!');
-        alert('⚠️ ERROR: Tidak ada tombol absensi ditemukan! Check HTML structure.');
+        console.warn('Possible reasons: 1) No schedules today, 2) All schedules past time, 3) Student not enrolled in any class');
+        // No annoying alert - just log the info
     }
     
     // Handle attendance button clicks
