@@ -510,8 +510,25 @@ Route::middleware('auth')->group(function () {
     });
 
     // Teacher routes
-    Route::prefix('teacher')->name('teacher.')->group(function () {
-        Route::get('/dashboard', [DashboardController::class, 'teacher'])->name('dashboard');
+    Route::prefix('teacher')->name('teacher.')->middleware('auth')->group(function () {
+        Route::get('/dashboard', [\App\Http\Controllers\Teacher\DashboardController::class, 'index'])->name('dashboard');
+        
+        // Schedules routes
+        Route::get('/schedules', [\App\Http\Controllers\Teacher\ScheduleController::class, 'index'])->name('schedules.index');
+        Route::get('/schedules/{schedule}', [\App\Http\Controllers\Teacher\ScheduleController::class, 'show'])->name('schedules.show');
+        
+        // Attendances routes
+        Route::get('/attendances', [\App\Http\Controllers\Teacher\AttendanceController::class, 'index'])->name('attendances.index');
+        Route::get('/attendances/{attendance}', [\App\Http\Controllers\Teacher\AttendanceController::class, 'show'])->name('attendances.show');
+        
+        // Students routes
+        Route::get('/students', [\App\Http\Controllers\Teacher\StudentController::class, 'index'])->name('students.index');
+        Route::get('/students/{student}', [\App\Http\Controllers\Teacher\StudentController::class, 'show'])->name('students.show');
+        
+        // Reports routes
+        Route::get('/reports', [\App\Http\Controllers\Teacher\ReportController::class, 'index'])->name('reports.index');
+        Route::get('/reports/class/{class}', [\App\Http\Controllers\Teacher\ReportController::class, 'classReport'])->name('reports.class');
+        Route::get('/reports/export/{class}', [\App\Http\Controllers\Teacher\ReportController::class, 'export'])->name('reports.export');
     });
 
     // Student routes
@@ -606,3 +623,8 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
+// Test route for chart visibility
+Route::get('/test-chart', function () {
+    return view('teacher.test-chart');
+})->name('test.chart');

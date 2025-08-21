@@ -338,25 +338,29 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#">
+                        <a class="nav-link {{ request()->routeIs('teacher.schedules*') ? 'active' : '' }}" 
+                           href="{{ route('teacher.schedules.index') }}">
                             <i class="fas fa-calendar-alt me-2"></i>
                             Jadwal Mengajar
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#">
+                        <a class="nav-link {{ request()->routeIs('teacher.attendances*') ? 'active' : '' }}" 
+                           href="{{ route('teacher.attendances.index') }}">
                             <i class="fas fa-clipboard-check me-2"></i>
                             Absensi Siswa
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#">
+                        <a class="nav-link {{ request()->routeIs('teacher.students*') ? 'active' : '' }}" 
+                           href="{{ route('teacher.students.index') }}">
                             <i class="fas fa-users me-2"></i>
                             Data Siswa
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#">
+                        <a class="nav-link {{ request()->routeIs('teacher.reports*') ? 'active' : '' }}" 
+                           href="{{ route('teacher.reports.index') }}">
                             <i class="fas fa-chart-bar me-2"></i>
                             Laporan Kelas
                         </a>
